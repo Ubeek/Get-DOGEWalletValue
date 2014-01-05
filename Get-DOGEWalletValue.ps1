@@ -1,9 +1,11 @@
-Param([string]$wallet,[string]$log = "y",[string]$useStoredWallet)
+Param([string]$wallet,[string]$log,[string]$useStoredWallet)
 function Get-ScriptDirectory
 {
   $Invocation = (Get-Variable MyInvocation -Scope 1).Value
   Split-Path $Invocation.MyCommand.Path
 }
+
+#This seems to barf with scheduled tasks, suggest replacing 'Get-ScriptDirectory' with actual path to script (or seperate data folder if you are that way inclined) when scheduling.
 $pathScript = Get-ScriptDirectory
 
 $pathWallet = "$pathScript\wallet.txt"
@@ -74,9 +76,9 @@ If($log -ilike "y*")
 {
     If(!$(Test-Path $pathLogCSV))
     {
-        $CSVheader = "DateTime,Balance(DOGE),Value(BTC),Market(DOGE-BTC),Value(USD),Market(BTC-USD)"
+        $CSVheader = "DateTime,Balance(DOGE),Value(BTC),TradePrice(DOGE-BTC),Market(DOGE-BTC),Value(USD),TradePrice(USD-BTC),Market(USD-BTC)"
         Add-Content $pathLogCSV $CSVheader
     }
     $currentDateTime = get-Date -format s
-    Add-Content $pathLogCSV "$currentDateTime,$balance,$BTCValue,$($DOGEtoBTC.best_market),$USDValue,$($BTCtoUSD.best_market)"
+    Add-Content $pathLogCSV "$currentDateTime,$balance,$BTCValue,$($DOGEtoBTC.Price),$($DOGEtoBTC.best_market),$USDValue,$($BTCtoUSD.Price),$($BTCtoUSD.best_market)"
 }
