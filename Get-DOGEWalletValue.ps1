@@ -1,6 +1,8 @@
-Param([string]$wallet)
+Param([string]$wallet,[string]$log = "y",[string]$useStoredWallet)
+
 $pathWallet = "wallet.txt"
-If(Test-Path $pathWallet)
+If($useStoredWallet -ilike "y*"){$wallet = Get-Content $pathWallet}
+If((Test-Path $pathWallet) -and (!$wallet))
 {
     If($(Read-Host "Use stored wallet address(es)? (y/n)") -ilike "y*")
     {
@@ -17,6 +19,7 @@ If(!$wallet)
     }
 }
 
+$pathLogCSV = "$wallet.csv"
 $walletAPI = "http://dogechain.info/chain/CHAIN/q/addressbalance"
 $cryptoAPI = "http://www.cryptocoincharts.info/v2/api/tradingPair"
 $pairDOGEtoBTC = "DOGE_BTC"
@@ -58,3 +61,15 @@ Write-Host "Best Market Currently (DOGE\BTC): `t$($DOGEtoBTC.best_market)"
 Write-Host "Balance of wallet in BTC: `t`t$BTCValue"
 Write-Host "Best Market Currently (BTC\USD): `t$($BTCtoUSD.best_market)"
 Write-Host "Balance of wallet in USD:`t`t`$$USDValue"
+
+
+If($log -ilike "y*")
+{
+    If(!$(Test-Path $pathLogCSV))
+    {
+        $CSVheader = "DateTime,Balance(DOGE),Value(BTC),Market(DOGE-BTC),Value(USD),Market(BTC-USD)"
+        Add-Content $pathLogCSV $CSVheader
+    }
+    $currentDateTime = get-Date -format s
+    Add-Content $pathLogCSV "$currentDateTime,$balance,$BTCValue,$($DOGEtoBTC.best_market),$USDValue,$($BTCtoUSD.best_market)"
+}
