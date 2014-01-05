@@ -1,6 +1,13 @@
 Param([string]$wallet,[string]$log = "y",[string]$useStoredWallet)
+function Get-ScriptDirectory
+{
+  $Invocation = (Get-Variable MyInvocation -Scope 1).Value
+  Split-Path $Invocation.MyCommand.Path
+}
+$pathScript = Get-ScriptDirectory
 
-$pathWallet = "wallet.txt"
+$pathWallet = "$pathScript\wallet.txt"
+Write-Host "Wallet path is $pathWallet"
 If($useStoredWallet -ilike "y*"){$wallet = Get-Content $pathWallet}
 If((Test-Path $pathWallet) -and (!$wallet))
 {
@@ -19,7 +26,7 @@ If(!$wallet)
     }
 }
 
-$pathLogCSV = "$wallet.csv"
+$pathLogCSV = "$pathScript\$wallet.csv"
 $walletAPI = "http://dogechain.info/chain/CHAIN/q/addressbalance"
 $cryptoAPI = "http://www.cryptocoincharts.info/v2/api/tradingPair"
 $pairDOGEtoBTC = "DOGE_BTC"
