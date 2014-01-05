@@ -1,5 +1,21 @@
 Param([string]$wallet)
-If(!$wallet){$wallet = Read-Host "Please enter DOGE wallet address (Seperate with comma if multiple)"}
+$pathWallet = "wallet.txt"
+If(Test-Path $pathWallet)
+{
+    If($(Read-Host "Use stored wallet address(es)? (y/n)") -ilike "y*")
+    {
+        $wallet = Get-Content $pathWallet        
+    }
+}
+If(!$wallet)
+{
+    $wallet = Read-Host "Please enter DOGE wallet address (Seperate with comma if multiple)"
+    If($(Read-Host "Would you like to store this address for future use? (y/n)`nWarning: Overwrites previously stored addresses") -ilike "y*")
+    {
+        If(Test-Path $pathWallet){Remove-Item $pathWallet}
+        Add-Content $pathWallet $wallet
+    }
+}
 
 $walletAPI = "http://dogechain.info/chain/CHAIN/q/addressbalance"
 $cryptoAPI = "http://www.cryptocoincharts.info/v2/api/tradingPair"
@@ -12,10 +28,10 @@ $proxy.Credentials = [System.Net.CredentialCache]::DefaultCredentials
 $webclient = New-Object Net.Webclient
 $webclient.proxy = $proxy
 
-#Get num of DOGE in wallet(s)
 $things = $wallet.Split(",")
-Write-Host "Processing $($things.count) wallet(s)"
-Foreach($w in $things)
+$things = $things.Replace(" ","")
+
+Foreach($w in $things) #Get num of DOGE in wallet(s)
 {
     $wbalance = $webclient.DownloadString("$walletAPI/$w")
     $balance = [double]$balance + [double]$wbalance
@@ -34,18 +50,11 @@ $BTCtoUSD = $strBTCtoUSD | ConvertFrom-JSON
 
 $BTCValue = [double]$balance * [double]$DOGEtoBTC.price
 $USDvalue = [double]$BTCValue * [double]$BTCtoUSD.price
-$result = @{}
-$result.Add("DOGE Wallet(s)", $wallet)
-$result.Add("Wallet Balance",$balance)
-$result.Add("Balance in BTC",$BTCValue)
-$result.Add("Best market(DOGE to BTC)",$DOGEtoBTC.best_market)
-$result.Add("Balance in USD",$USDValue)
-$result.Add("Best market(BTC to USD)",$BTCtoUSD.best_market)
-Write-Host "DOGECoin Wallet(s): $wallet"
-Write-Host "Balance of Wallet: $balance"
-Write-Host "Best Market Currently (DOGE\BTC): $($DOGEtoBTC.best_market)"
-Write-Host "Balance of wallet in BTC: $BTCValue"
-Write-Host "Best Market Currently (BTC\USD): $($BTCtoUSD.best_market)"
-Write-Host "Balance of wallet in USD: $USDValue"
-#Write-Host "`n--------------`n"
-#$result | ft
+
+Write-Host "-------`nResults`n-------" -ForegroundColor Green
+Write-Host "DOGECoin Wallet(s): `t`t`t$wallet"
+Write-Host "Balance of Wallet: `t`t`t$balance DOGE"
+Write-Host "Best Market Currently (DOGE\BTC): `t$($DOGEtoBTC.best_market)"
+Write-Host "Balance of wallet in BTC: `t`t$BTCValue"
+Write-Host "Best Market Currently (BTC\USD): `t$($BTCtoUSD.best_market)"
+Write-Host "Balance of wallet in USD:`t`t`$$USDValue"
