@@ -1,15 +1,21 @@
-Param([string]$wallet,[string]$log,[string]$useStoredWallet)
+Param([string]$wallet,[string]$log,[string]$useStoredWallet,[string]$logtype = "csv")
 function Get-ScriptDirectory
 {
   $Invocation = (Get-Variable MyInvocation -Scope 1).Value
   Split-Path $Invocation.MyCommand.Path
 }
 
+#MySQL Logging settings - Note: This requires the Something Something NET Connector Thingy
+$MySQLAdminUserName = 'root'
+$MySQLAdminPassword = ''
+$MySQLDatabase = 'Coin'
+$MySQLHost = 'localhost'
+$MySQLTable = 'pricing'
+
 #This seems to barf with scheduled tasks, suggest replacing 'Get-ScriptDirectory' with actual path to script (or seperate data folder if you are that way inclined) when scheduling.
 $pathScript = Get-ScriptDirectory
 
 $pathWallet = "$pathScript\wallet.txt"
-Write-Host "Wallet path is $pathWallet"
 If($useStoredWallet -ilike "y*"){$wallet = Get-Content $pathWallet}
 If((Test-Path $pathWallet) -and (!$wallet))
 {
@@ -74,11 +80,40 @@ Write-Host "Balance of wallet in USD:`t`t`$$USDValue"
 
 If($log -ilike "y*")
 {
-    If(!$(Test-Path $pathLogCSV))
+    If($logtype -ilike "csv")
     {
-        $CSVheader = "DateTime,Balance(DOGE),Value(BTC),TradePrice(DOGE-BTC),Market(DOGE-BTC),Value(USD),TradePrice(USD-BTC),Market(USD-BTC)"
-        Add-Content $pathLogCSV $CSVheader
+        If(!$(Test-Path $pathLogCSV))
+        {
+            $CSVheader = "DateTime,Balance(DOGE),Value(BTC),TradePrice(DOGE-BTC),Market(DOGE-BTC),Value(USD),TradePrice(USD-BTC),Market(USD-BTC)"
+            Add-Content $pathLogCSV $CSVheader
+        }
+        $currentDateTime = get-Date -format s
+        Add-Content $pathLogCSV "$currentDateTime,$balance,$BTCValue,$($DOGEtoBTC.Price),$($DOGEtoBTC.best_market),$USDValue,$($BTCtoUSD.Price),$($BTCtoUSD.best_market)"
     }
-    $currentDateTime = get-Date -format s
-    Add-Content $pathLogCSV "$currentDateTime,$balance,$BTCValue,$($DOGEtoBTC.Price),$($DOGEtoBTC.best_market),$USDValue,$($BTCtoUSD.Price),$($BTCtoUSD.best_market)"
+    ElseIf($logtype -ilike "mysql")
+    {
+        $ConnectionString = "server=" + $MySQLHost + ";port=3306;uid=" + $MySQLAdminUserName + ";pwd=" + $MySQLAdminPassword + ";database="+$MySQLDatabase
+        $currentDateTime = get-Date -format s
+        $currentDateTime = $currentDateTime.Replace("T"," ")
+        $query = "INSERT INTO ``$MySQLTable`` (``time``, ``wallet``, ``balance``, ``btcvalue``, ``btcprice``, ``btcmarket``, ``usdvalue``, ``usdprice``, ``usdmarket``) VALUES (""$currentDateTime"", ""$wallet"", $balance, $BTCValue, $($DOGEtoBTC.Price), ""$($DOGEtoBTC.best_market)"", $USDValue, $($BTCtoUSD.Price), ""$($BTCtoUSD.best_market)"")"
+        Try
+        {
+            [void][System.Reflection.Assembly]::LoadWithPartialName("MySql.Data")
+            $Connection = New-Object MySql.Data.MySqlClient.MySqlConnection
+            $Connection.ConnectionString = $ConnectionString
+            $Connection.Open()
+            $Command = New-Object MySql.Data.MySqlClient.MySqlCommand($Query, $Connection)
+            $DataAdapter = New-Object MySql.Data.MySqlClient.MySqlDataAdapter($Command)
+            $DataSet = New-Object System.Data.DataSet
+            $RecordCount = $dataAdapter.Fill($dataSet, "data")
+        }
+        Catch
+        {
+            Write-Host "ERROR : Unable to log data : $query `n$Error[0]"
+        }
+        Finally
+        {
+            $Connection.Close()
+        }
+    }
 }
