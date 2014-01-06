@@ -57,9 +57,9 @@ $USDvalue = [double]$BTCValue * [double]$BTCtoUSD.price
 Write-Host "-------`nResults`n-------" -ForegroundColor Green
 Write-Host "DOGECoin Wallet(s): `t`t`t$wallet"
 Write-Host "Balance of Wallet: `t`t`t$balance DOGE"
-Write-Host "Best Market Currently (DOGE\BTC): `t$($DOGEtoBTC.best_market)"
+Write-Host "Best Market + Price (DOGE\BTC): `t$($DOGEtoBTC.best_market) $($DOGEtoBTC.price)"
 Write-Host "Balance of wallet in BTC: `t`t$BTCValue"
-Write-Host "Best Market Currently (BTC\USD): `t$($BTCtoUSD.best_market)"
+Write-Host "Best Market + Price (BTC\USD): `t`t$($BTCtoUSD.best_market) $($BTCtoUSD.price)"
 Write-Host "Balance of wallet in USD:`t`t`$$USDValue"
 
 
@@ -67,9 +67,9 @@ If($log -ilike "y*")
 {
     If(!$(Test-Path $pathLogCSV))
     {
-        $CSVheader = "DateTime,Balance(DOGE),Value(BTC),Market(DOGE-BTC),Value(USD),Market(BTC-USD)"
+        $CSVheader = "DateTime,Balance(DOGE),Value(BTC),Price(BTC),Market(DOGE-BTC),Value(USD),Price(USD),Market(BTC-USD)"
         Add-Content $pathLogCSV $CSVheader
     }
     $currentDateTime = get-Date -format s
-    Add-Content $pathLogCSV "$currentDateTime,$balance,$BTCValue,$($DOGEtoBTC.best_market),$USDValue,$($BTCtoUSD.best_market)"
+    Add-Content $pathLogCSV "$currentDateTime,$balance,$BTCValue,$($DOGEtoBTC.price),$($DOGEtoBTC.best_market),$USDValue,$($BTCtoUSD.price),$($BTCtoUSD.best_market)"
 }
